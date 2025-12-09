@@ -1,29 +1,32 @@
 const express = require('express');
-const mysql = require('mysql');
+const sequelize = require('./config/db'); // Import the DB connection
+const authRoutes = require('./routes/AuthRoutes'); // Import the routes
+require('dotenv').config(); // Load environment variables
 
 const app = express();
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Tharu#12',
-    database: 'sales-analytics',
-    port: 3307
-});
 
-db.connect((err) => {
-    if (err) {
-        console.error('Error connecting to the database:', err);
-        return;
-    }
-    console.log('Connected to the MySQL database.');
-});
+// 1. Middleware
+app.use(express.json()); // Allows the app to accept JSON data
 
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
-});
+// 2. Routes
+// This prefixes all auth routes with '/api/auth'
+// Example: localhost:3000/api/auth/login
+app.use('/api/auth', authRoutes);
 
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
-});
+// 3. Database Sync & Server Start
+// "force: false" means it won't delete existing data.
+// Set to "true" only if you want to wipe the DB and start fresh.
+sequelize.sync({ force: false })
+    .then(() => {
+        console.log('Database synced successfully.');
+        
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.error('Failed to sync database:', err);
+    });
 
 module.exports = app;
