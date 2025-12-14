@@ -2,6 +2,7 @@ const express = require('express');
 const sequelize = require('./config/db'); // Import the DB connection
 const authRoutes = require('./routes/AuthRoutes'); // Import the routes
 require('dotenv').config(); // Load environment variables
+const salesRoutes = require('./routes/SalesRoutes');
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json()); // Allows the app to accept JSON data
 // This prefixes all auth routes with '/api/auth'
 // Example: localhost:3000/api/auth/login
 app.use('/api/auth', authRoutes);
+app.use('/api/sales', salesRoutes);
 
 // 3. Database Sync & Server Start
 // "force: false" means it won't delete existing data.
