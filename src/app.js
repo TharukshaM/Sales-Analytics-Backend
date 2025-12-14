@@ -7,17 +7,12 @@ const salesRoutes = require('./routes/SalesRoutes');
 const app = express();
 
 // 1. Middleware
-app.use(express.json()); // Allows the app to accept JSON data
+app.use(express.json());
 
-// 2. Routes
-// This prefixes all auth routes with '/api/auth'
-// Example: localhost:3000/api/auth/login
 app.use('/api/auth', authRoutes);
 app.use('/api/sales', salesRoutes);
 
-// 3. Database Sync & Server Start
-// "force: false" means it won't delete existing data.
-// Set to "true" only if you want to wipe the DB and start fresh.
+
 sequelize.sync({ force: false })
     .then(() => {
         console.log('Database synced successfully.');

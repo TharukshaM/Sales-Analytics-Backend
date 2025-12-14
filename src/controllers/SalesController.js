@@ -1,6 +1,8 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 const Sale = require('../models/Sale');
+const formatFileSize = require('../Helpers/FormatFileSize');
+const UploadLog = require('../models/UploadLog');
 
 exports.uploadSales = async (req, res) => {
     try {
@@ -8,39 +10,50 @@ exports.uploadSales = async (req, res) => {
             return res.status(400).json({ error: 'Please upload a CSV file' });
         }
 
-        const salesData = [];
         const filePath = req.file.path;
+        
+        // 1. Create the "Recent Upload" Log entry (Status: Processing)
+        const newUpload = await UploadLog.create({
+            fileName: req.file.originalname,
+            fileSize: formatFileSize(req.file.size),
+            status: 'Processing',
+            userId: req.user.id
+        });
 
-        // 1. Read and Parse the CSV File
+        const salesData = [];
+
+        // 2. Process the CSV
         fs.createReadStream(filePath)
             .pipe(csv())
             .on('data', (row) => {
-                // Map CSV columns to Database Columns
-                // Assuming CSV headers are: date, customer, product, region, sales, units
                 salesData.push({
-                    transactionDate: row.date, // "date" from CSV
+                    transactionDate: row.date,
                     customer: row.customer,
                     product: row.product,
                     region: row.region,
-                    amount: parseFloat(row.sales), // "sales" from CSV
+                    amount: parseFloat(row.sales),
                     units: parseInt(row.units),
-                    userId: req.user.id // Linked to the logged-in user
+                    userId: req.user.id
                 });
             })
             .on('end', async () => {
                 try {
-                    // 2. Bulk Insert into Database
+                    // 3. Save Sales Data
                     await Sale.bulkCreate(salesData);
                     
-                    // 3. Remove the file after processing (Optional)
-                    fs.unlinkSync(filePath);
+                    // 4. Update Log Status to "Success"
+                    await newUpload.update({ status: 'Success' });
+                    
+                    fs.unlinkSync(filePath); // Cleanup file
 
                     res.status(201).json({ 
                         message: 'File processed successfully', 
-                        recordsHelper: salesData.length 
+                        uploadId: newUpload.id 
                     });
                 } catch (error) {
-                    console.error('Database Insert Error:', error);
+                    // If DB insert fails, mark as Failed
+                    await newUpload.update({ status: 'Failed' });
+                    console.error('Database Error:', error);
                     res.status(500).json({ error: 'Failed to save sales data' });
                 }
             });
@@ -48,5 +61,18 @@ exports.uploadSales = async (req, res) => {
     } catch (error) {
         console.error('Upload Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+exports.getUploadHistory = async (req, res) => {
+    try {
+        const history = await UploadLog.findAll({
+            where: { userId: req.user.id },
+            order: [['uploadDate', 'DESC']], // Newest first
+            limit: 5 // Only show last 5 uploads (like the screenshot)
+        });
+        res.status(200).json(history);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch history' });
     }
 };
