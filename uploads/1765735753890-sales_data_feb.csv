@@ -1,0 +1,6 @@
+date,customer,product,region,sales,units
+2024-02-01,Stark Ind,Widget X,East,4500.00,15
+2024-02-02,Wayne Ent,Widget Y,North,8200.00,30
+2024-02-03,Cyberdyne,Widget X,West,1250.50,5
+2024-02-04,Massive Dynamic,Widget Z,South,3400.00,10
+2024-02-05,Oscorp,Widget Y,East,5600.00,20
